@@ -1,13 +1,12 @@
-import {useEffect, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import useStateMachine from '../hook/useStateMachine'
+import useInterval from '../hook/useInterval'
 
 
 export default function FSM() {
-  const [count, setCount] = useState(0)
+  const count = useRef(0)
   const [state, setState] = useState('')
-  const FSM = useStateMachine('test')
-
-  let T
+  const FSM = useStateMachine('test', true)
 
 
   useEffect(()=>{
@@ -16,43 +15,68 @@ export default function FSM() {
     })
 
     FSM.addState('running', {
-      onEnter:()=>setState('running'),
+      onEnter:()=>{
+        setState('running')
+      },
       onUpdate:()=>{
-        T = setInterval(()=>{
-          setCount(count+1)
-        }, 100)
+        count.current++
       },
       onExit:()=>{
-        clearInterval(T)
       },
     })
 
     FSM.addState('paused', {
-      onEnter:()=>setState('paused')
+      onEnter:()=>{
+        setState('paused')
+      }
     })
 
     FSM.addState('stopped', {
-      onEnter:()=>setState('stopped')
+      onEnter:()=>{
+        count.current = 0
+        setState('stopped')
+      },
+      onUpdate:()=>{
+        FSM.goto('idle')
+      },
     })
 
     FSM.addTransition('idle','running')
     FSM.addTransition('running','paused')
     FSM.addTransition('paused','running')
+    FSM.addTransition('paused','stopped')
     FSM.addTransition('running','stopped')
     FSM.addTransition('stopped','idle')
 
     FSM.setState('idle')
   },[])
 
+  useInterval(()=>{
+    if (FSM) FSM.update(1000)
+  }, 1000)
+
   return <>
-    <div>State: {state}</div>
+    <span>State: {state} {count.current}</span>
+    <br />
 
-    <button onClick={E=>FSM.goto('idle')}>Idle</button>
+    <button
+      disabled={!FSM.available('idle')}
+      onClick={E=>FSM.goto('idle')}
+    >Idle</button>
     
-    <button onClick={E=>FSM.goto('running')}>Run {count}</button>
+    <button
+      onClick={E=>FSM.goto('running')}
+      disabled={!FSM.available('running')}
+    >Run</button>
 
-    <button onClick={E=>FSM.goto('paused')}>Pause</button>
+    <button
+      onClick={E=>FSM.goto('paused')}
+      disabled={!FSM.available('paused')}
+    >Pause</button>
     
-    <button onClick={E=>FSM.goto('stopped')}>Stop</button>
+    <button
+      onClick={E=>FSM.goto('stopped')}
+      disabled={!FSM.available('stopped')}
+    >Stop</button>
   </>
 }

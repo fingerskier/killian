@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react'
 
 
-export default function useStateMachine(ID) {
+export default function useStateMachine(ID, verbose=false) {
   const state = useRef({name:'void'})
   const [states, setStates] = useState({})
   const [transitions, setTransitions] = useState([])
@@ -14,7 +14,7 @@ export default function useStateMachine(ID) {
     states[name] = config
     states[name].name = name
     setStates({...states})
-    console.log('STATES', states)
+    if (verbose) console.log(`FSM<${ID}>: Added state ${name}.`, config)
   }
 
 
@@ -24,15 +24,24 @@ export default function useStateMachine(ID) {
   }
 
 
+  // the `available` function returns true if there is a valid transition from the current state to the desired state
+  const available = desiredState=>{
+    return (state.current.name === 'void') 
+      || transitions.find(t=>t.from === state.current.name && t.to === desiredState)
+  }
+
+
   const goto = desiredState=>{
-    console.log('GOTO', desiredState, state.current)
+    if (verbose) console.log(`FSM<ID>:GOTO`, desiredState, 'FROM', state.current)
+
+    /* the transition is valid only if we are:
+       * transitioning from the void state
+       * using a registered transition
+    */
     const transition = (state.current.name === 'void') 
-    || 
-    (state.current.name === desiredState)
-    ||
-    transitions.find(t=>{
-      return t.from === state.current.name && t.to === desiredState
-    })
+      || transitions.find(t=>{
+        return t.from === state.current.name && t.to === desiredState
+      })
     
     if (transition) {
       setState(desiredState)
@@ -52,12 +61,11 @@ export default function useStateMachine(ID) {
     
     changingState = true
     
-    console.log(`FSM<${ID}>: Transitioning from ${state.current?.name} to ${name}.`)
-    
     if (state.current?.onExit) state.current.onExit()
+    if (verbose) console.log(`FSM<${ID}>: Exiting state ${state.current.name}.`)
     
     state.current = states[name]
-    console.log('setstate', name, states[name])
+    if (verbose) console.log(`FSM<${ID}>: Set state to ${name}.`)
     
     if (state.current?.onEnter) state.current.onEnter()
     
@@ -72,15 +80,10 @@ export default function useStateMachine(ID) {
   }
 
 
-  useEffect(() => {
-    console.log('STATE', state.current)
-  }, [state.current])
-  
-
-
   return {
     addState,
     addTransition,
+    available,
     goto,
     setState,
     update,
