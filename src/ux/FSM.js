@@ -68,7 +68,7 @@ export default function FSM() {
       onClick={E=>FSM.goto('running')}
       disabled={!FSM.available('running')}
     >Run</button>
-
+    
     <button
       onClick={E=>FSM.goto('paused')}
       disabled={!FSM.available('paused')}
